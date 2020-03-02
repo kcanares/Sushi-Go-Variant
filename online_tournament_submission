@@ -1,0 +1,113 @@
+import math
+from collections import defaultdict
+
+*****************************************************************************
+# a dictionary of the score each value is worth
+score_value = {'A': 20, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6,
+               '7': 7, '8': 8, '9': 9, '0': 10,
+               'J': 11, 'Q': 12, 'K': 13}
+
+# dictionary with keys being suits and values being what the opposite
+# colour suits are
+opposite_colour = {'H': ['C', 'S'], 'D': ['C', 'S'], 'C': ['H', 'D'],
+                   'S': ['H', 'D']}
+
+*****************************************************************************
+def comp10001go_play(discard_history, player_no, hand):
+    """Returns a single card to discard from the given hand. Ensuring that the
+    discarded card increases chances of scoring N-of-a-kinds"""
+    
+    # gives the current player's discard history
+    player_discard = []
+    for discard_list in discard_history:
+        player_discard.append(discard_list[player_no])
+    
+    # tallies the types of cards the player has discarded previously
+    card_count = defaultdict(int)
+    for card in player_discard:
+        card_count[card[0]] += 1
+        
+    # sort cards in hand in ascending order according to their individual 
+    # score value
+    for i in range(len(hand)):
+        for j in range(1, len(hand)):
+            if score_value[hand[j - 1][0]] > score_value[hand[j][0]]:
+                (hand[j - 1], hand[j]) = (hand[j], hand[j - 1])
+                
+    # create list of cards in hand that isn't an ace
+    excluding_ace_cards = []
+    for card in hand:
+        if card[0] != 'A':
+            excluding_ace_cards.append(card)
+    
+    # discards 3rd highest valued card for the first move
+    if not discard_history:
+        return excluding_ace_cards[-3]
+        
+    # stores previously discarded cards and their frequencies into a list of 
+    # tuples for easier sortability
+    card_freq_list = []
+    for card, freq in card_count.items():
+        card_freq_list.append((-freq, card))
+
+    # discards the same valued card that has been most frequently discarded.
+    # If that is not available, then the highest valued non-ace card 
+    # is discarded. If the hand is solely made of aces, then an ace is 
+    # discarded
+    for card in hand:
+        if card[0] == sorted(card_freq_list)[0][1]:
+            return card
+    
+    if excluding_ace_cards:
+        return excluding_ace_cards[-1]
+    else:
+        return hand[-1]
+
+*****************************************************************************    
+def comp10001go_group(discard_history, player_no):
+    """ return a list valid scoring groups of cards based on the discard 
+    history of 'player_no'. These lists are use in scoring the player."""
+    
+    # gives the current player's discard history
+    player_discard = []
+    for discard_list in discard_history:
+        player_discard.append(discard_list[player_no])
+    
+    # sorts player's discard history in ascending order
+    # based on each card's individual score
+    for i in range(len(player_discard)):
+        for j in range(1, len(player_discard)):
+            if (score_value[player_discard[j - 1][0]] > 
+                score_value[player_discard[j][0]]):
+                (player_discard[j - 1], 
+                 player_discard[j]) = (player_discard[j], player_discard[j - 1]
+                                       )
+    
+    # tallies the cards the player has discarded previously
+    card_count = defaultdict(int)
+    for card in player_discard:
+        card_count[card[0]] += 1
+    
+    score_groups = []
+    
+    # groups n-of-a-kind cards
+    for card_value, count in card_count.items():
+        factorial_group = []
+        if count > 1 and card_value != 'A':
+            for card in player_discard:
+                if card[0] == card_value:
+                    factorial_group.append(card)
+            score_groups.append(factorial_group)
+    
+    # removes cards from player_discard that have already been used to score
+    # N-of-a-kinds
+    for group in score_groups:
+        for card in group:
+            player_discard.remove(card)
+    
+    # adds singleton groups to the groups used for scoring
+    for card in player_discard:
+        score_groups.append([card])
+    
+    # tally a list of factorial groups
+    return score_groups
